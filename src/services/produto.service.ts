@@ -224,7 +224,6 @@ export const bulkUploadCSV = async (
     const numeroLinha = i + 1;
 
     try {
-      // Validate product
       if (!produto.nome || !produto.preco || !produto.urlImagens || produto.urlImagens.length === 0) {
         throw new Error('Dados inválidos: nome, preço e imagens são obrigatórios');
       }
