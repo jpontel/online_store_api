@@ -4,12 +4,12 @@ import {
   recuperarHistorico,
   recuperarPedido
 } from '../controllers/pedidos.controller';
-import { autenticar, requireRole } from '../middleware/auth';
+import { autenticarUsuario, validarTipoUsuario } from '../middleware/auth';
 
 const router = Router();
 
 // All order routes require authentication and CUSTOMER role
-router.use(autenticar, requireRole('CUSTOMER'));
+router.use(autenticarUsuario, validarTipoUsuario('CUSTOMER'));
 
 router.post('/', criarPedido);
 router.get('/', recuperarHistorico);

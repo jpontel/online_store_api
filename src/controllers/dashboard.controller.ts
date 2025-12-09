@@ -8,9 +8,9 @@ export const recuperarDashboard = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user) {
+    
+    if (!req.user) 
       return res.status(401).json({ message: 'Não autenticado' } as any);
-    }
 
     const dashboard = await dashboardService.recuperarDashboard(req.user.id);
     res.json(dashboard);

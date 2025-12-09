@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import * as contaService from '../services/conta.service';
+
 import {
   ContaVendedorDto,
   ContaVendedorAtualizarDto
 } from './dto/conta.dto';
+
 import { ProdutoListagemDto } from './dto/produtos.dto';
 
 export const recuperarContaVendedor = async (
@@ -12,12 +14,13 @@ export const recuperarContaVendedor = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ mensagem: 'Não autenticado' } as any);
-    }
 
-    const account = await contaService.recuperarContaVendedor(req.user.id);
-    res.json(account);
+    if (!req.user) 
+      return res.status(401).json({ mensagem: 'Não autenticado' } as any);
+
+    const contaVendedor = await contaService.recuperarContaVendedor(req.user.id);
+
+    res.json(contaVendedor);
   } catch (error) {
     next(error);
   }
@@ -46,15 +49,15 @@ export const listarProdutosVendedor = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user) {
+    if (!req.user)
       return res.status(401).json({ mensagem: 'Não autenticado' } as any);
-    }
 
     const pagina = parseInt(req.query.pagina || '1');
     const limite = parseInt(req.query.limite || '20');
 
-    const products = await contaService.listarProdutosVendedor(req.user.id, pagina, limite);
-    res.json(products);
+    const produtosVendedor = await contaService.listarProdutosVendedor(req.user.id, pagina, limite);
+
+    res.json(produtosVendedor);
   } catch (error) {
     next(error);
   }

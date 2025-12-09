@@ -2,25 +2,26 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Get environment variables
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseKey) {
   console.warn('Credenciais não encontradas!');
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+console.log("url:", supabaseUrl, "key", supabaseKey);
+
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
 export const conectarDatabase = async () => {
    try {
       const { error } = await supabase.from('usuarios').select('count', { count: 'exact', head: true });
 
-      if (error && error.message.includes('relation') && error.message.includes('does not exist')) {
-         console.log('Online Store API [Database]: Conexão inicializada - Sem tabelas criadas');
-      } else if (error) {
-         console.warn('Online Store API [Database]:', error.message);
+      if (error) {
+         console.warn('Online Store API [Database] - Ocorreu um Erro: ', error.message);
       } else {
          console.log('Online Store API [Database]: Conexão estabelecida');
       }
+
    } catch (error) {
       if(error instanceof Error) {
          throw new Error("Ocorreu um erro interno");

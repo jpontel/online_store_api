@@ -5,12 +5,12 @@ import {
   alterarQuantidadeItem,
   removerItem
 } from '../controllers/carrinho.controller';
-import { autenticar, requireRole } from '../middleware/auth';
+import { autenticarUsuario, validarTipoUsuario } from '../middleware/auth';
+import { TipoUsuario } from '../models/usuario.model';
 
 const router = Router();
 
-// All cart routes require authentication and CUSTOMER role
-router.use(autenticar, requireRole('CUSTOMER'));
+router.use(autenticarUsuario, validarTipoUsuario(TipoUsuario.COMPRADOR));
 
 router.get('/', recuperarCarrinho);
 router.post('/itens', adicionarItem);

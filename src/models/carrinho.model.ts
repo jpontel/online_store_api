@@ -31,7 +31,6 @@ export function itemCarrinhoRowToModel(row: ItemCarrinhoRow): IItemCarrinho {
   };
 }
 
-// Utility to convert model to database row insert
 export function itemCarrinhoModelToInsert(item: Partial<IItemCarrinho>): Partial<ItemCarrinhoRow> {
   return {
     cliente_id: item.clienteId,

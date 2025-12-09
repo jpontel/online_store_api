@@ -16,8 +16,8 @@ export const recuperarProdutos = async (
   next: NextFunction
 ) => {
   try {
-      const products = await produtosService.recuperarProdutos(req.query);
-      res.json(products);
+    const products = await produtosService.recuperarProdutos(req.query);
+    res.json(products);
   } catch (error) {
     next(error);
   }
@@ -90,10 +90,11 @@ export const bulkUploadCSV = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user) {
+    if (!req.user)
       return res.status(401).json({ mensagem: 'Não autenticado' } as any);
-    }
+
     const result = await produtosService.bulkUploadCSV(req.body, req.user.id);
+    
     res.json(result);
   } catch (error) {
     next(error);

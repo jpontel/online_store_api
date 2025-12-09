@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { recuperarDashboard } from '../controllers/dashboard.controller';
-import { autenticar, requireRole } from '../middleware/auth';
+import { autenticarUsuario, validarTipoUsuario } from '../middleware/auth';
+import { TipoUsuario } from '../models/usuario.model';
 
 const router = Router();
 
-// Dashboard route requires authentication and SELLER role
-router.get('/', autenticar, requireRole('SELLER'), recuperarDashboard);
+router.get('/', autenticarUsuario, validarTipoUsuario(TipoUsuario.VENDEDOR), recuperarDashboard);
 
 export default router;

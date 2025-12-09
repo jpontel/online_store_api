@@ -3,13 +3,13 @@ import cors from 'cors';
 
 import { errorHandler } from './middleware/errorHandler';
 
-import favoritesRoutes from './routes/favorites.routes';
+import favoritosRoutes from './routes/favoritos.routes';
 import dashboardRoutes from './routes/dashboard.routes';
-import productRoutes from './routes/products.routes';
-import accountRoutes from './routes/account.routes';
-import ordersRoutes from './routes/orders.routes';
+import produtoRoutes from './routes/produtos.routes';
+import contaRoutes from './routes/conta.routes';
+import pedidosRotas from './routes/pedidos.routes';
 import authRoutes from './routes/auth.routes';
-import cartRoutes from './routes/cart.routes';
+import carrinhoRoutes from './routes/carrinho.routes';
 
 const app: Application = express();
 
@@ -20,12 +20,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rotas
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/carrinho', cartRoutes);
-app.use('/api/favoritos', favoritesRoutes);
-app.use('/api/pedidos', ordersRoutes);
+app.use('/api/produtos', produtoRoutes);
+app.use('/api/carrinho', carrinhoRoutes);
+app.use('/api/favoritos', favoritosRoutes);
+app.use('/api/pedidos', pedidosRotas);
 app.use('/api/vendedor/dashboard', dashboardRoutes);
-app.use('/api/vendedor', accountRoutes);
+app.use('/api/vendedor', contaRoutes);
 
 app.use(errorHandler);
 

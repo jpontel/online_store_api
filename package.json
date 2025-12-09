@@ -4,10 +4,9 @@
   "description": "Caplink Online Store API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "sudo tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",

@@ -1,3 +1,5 @@
+import { UsuarioDto } from "../controllers/dto/auth.dto";
+
 export enum TipoUsuario {
   COMPRADOR = 'COMPRADOR',
   VENDEDOR = 'VENDEDOR'
@@ -46,6 +48,16 @@ export function usuarioRowToModel(row: UsuarioRow): IUsuario {
     dataUltimaAtualizacao: new Date(row.data_ultima_atualizacao)
   };
 }
+
+export function usuarioToDto(usuario: UsuarioRow): UsuarioDto {
+  return {
+    id: usuario.id,
+    email: usuario.email,
+    tipo: usuario.tipo as 'COMPRADOR' | 'VENDEDOR',
+    status: usuario.status as 'ATIVO' | 'INATIVO' | 'EXCLUIDO',
+    dataCriacao: new Date(usuario.data_criacao)
+  };
+};
 
 export function usuarioModelToInsert(usuario: Partial<IUsuario>): Partial<UsuarioRow> {
   return {

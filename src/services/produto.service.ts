@@ -55,7 +55,7 @@ export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto
   const total = count || 0;
   const totalPaginas = Math.ceil(total / limite);
 
-  return {
+  const produtoListagemDto: ProdutoListagemDto = {
     produtos,
     paginacao: {
       pagina,
@@ -64,6 +64,8 @@ export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto
       totalPaginas
     }
   };
+
+  return produtoListagemDto;
 };
 
 export const recuperarProduto = async (id: string): Promise<ProdutoDto> => {
