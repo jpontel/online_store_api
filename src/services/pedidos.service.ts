@@ -3,144 +3,133 @@ import {
   PedidoCriarDto,
   PedidoCriadoDto,
   PedidosListagemDto,
-  PedidoItemDto
+  Pedido
 } from '../controllers/dto/pedidos.dto';
-import { PedidoRow, ItemPedidoRow } from '../models/pedido.model';
-import { ProdutoRow } from '../models/produto.model';
+import { PedidoRow } from '../models/pedidos.model';
+import { ProdutoRow } from '../models/produtos.model';
 
 export const criarPedido = async (
-  clienteId: string,
-  data: PedidoCriarDto
+   clienteId: string,
+   data: PedidoCriarDto
 ): Promise<PedidoCriadoDto> => {
-  const { itens, endereco, metodoPagamento } = data;
+   const { itens, endereco, metodoPagamento } = data;
 
-  if (!itens || itens.length === 0)
-    throw { status: 400, message: 'Pedido deve conter pelo menos um item' };
+   if (!itens || itens.length === 0)
+      throw { status: 400, message: 'Pedido deve conter pelo menos um item' };
 
-  const { data: produtos, error: productsError } = await supabase
-    .from('produtos')
-    .select('*')
-    .in('id', itens.map(item => item.produtoId))
-    .eq('ativo', true);
+   // Validar se o produto está realmente ativo
+   const { data: produtos, error: produtosErro } = await supabase
+      .from('produtos')
+      .select('*')
+      .in('id', itens.map(item => item.produtoId))
+      .eq('ativo', true);
 
-  if (productsError) {
-    console.error('Error fetching products:', productsError);
-    throw { status: 500, message: 'Erro ao buscar produtos' };
-  }
+   if (produtosErro) {
+      throw { status: 500, message: 'Ocorreu um erro ao recuperar os produtos' };
+   }
 
-  if (!produtos || produtos.length !== itens.length)
-    throw { status: 400, message: 'Um ou mais produtos não estão disponíveis' };
+   if (!produtos || produtos.length !== itens.length)
+      throw { status: 400, message: 'Um ou mais produtos não estão disponíveis' };
 
-  const productsMap = new Map<string, ProdutoRow>();
+   const productsMap = new Map<string, ProdutoRow>();
 
-  produtos.forEach(p => productsMap.set(p.id, p as ProdutoRow));
+   produtos.forEach(p => productsMap.set(p.id, p as ProdutoRow));
 
-  let total = 0;
+   let total = 0;
 
-  const orderItems: Array<{
-    produto_id: string;
-    vendedor_id: string;
-    nome_produto: string;
-    preco_na_compra: number;
-    quantidade: number;
-  }> = [];
+   const orderItems: Array<{
+      produto_id: string;
+      vendedor_id: string;
+      nome_produto: string;
+      preco_na_compra: number;
+      quantidade: number;
+   }> = [];
 
-  for (const item of itens) {
-    const product = productsMap.get(item.produtoId);
+   for (const item of itens) {
+      const product = productsMap.get(item.produtoId);
 
-    if (!product) {
+      if (!product) {
       throw { status: 400, message: `Produto ${item.produtoId} não encontrado` };
-    }
+      }
 
-    if (item.quantidade <= 0) {
+      if (item.quantidade <= 0) {
       throw { status: 400, message: 'Quantidade deve ser maior que zero' };
-    }
+      }
 
-    const itemTotal = product.preco * item.quantidade;
-    total += itemTotal;
+      const itemTotal = product.preco * item.quantidade;
+      total += itemTotal;
 
-    orderItems.push({
+      orderItems.push({
       produto_id: product.id,
       vendedor_id: product.vendedor_id,
       nome_produto: product.nome,
       preco_na_compra: product.preco,
       quantidade: item.quantidade
-    });
-  }
+      });
+   }
 
-  // Create order
-  const { data: novoPedido, error: orderError } = await supabase
-    .from('pedidos')
-    .insert({
+   const { data: novoPedido, error: orderError } = await supabase
+      .from('pedidos')
+      .insert({
       cliente_id: clienteId,
       subtotal: total,
       total,
       endereco_json: endereco,
       metodo_pagamento: metodoPagamento,
       status: 'PENDENTE'
-    })
-    .select()
-    .single();
+      })
+      .select()
+      .single();
 
-  if (orderError || !novoPedido) {
-    console.error('Error creating order:', orderError);
-    throw { status: 500, message: 'Erro ao criar pedido' };
-  }
+   if (orderError || !novoPedido) {
+      console.error('Error creating order:', orderError);
+      throw { status: 500, message: 'Erro ao criar pedido' };
+   }
 
-  const pedidoRow = novoPedido as PedidoRow;
+   const pedidoRow = novoPedido as PedidoRow;
 
-  // Create order items
-  const orderItemsWithPedidoId = orderItems.map(item => ({
-    ...item,
-    pedido_id: pedidoRow.id
-  }));
+   const orderItemsWithPedidoId = orderItems.map(item => ({
+      ...item,
+      pedido_id: pedidoRow.id
+   }));
 
-  const { data: createdItems, error: itemsError } = await supabase
-    .from('itens_pedido')
-    .insert(orderItemsWithPedidoId)
-    .select();
+   const { data: createdItems, error: itemsError } = await supabase
+      .from('itens_pedido')
+      .insert(orderItemsWithPedidoId)
+      .select();
 
-  if (itemsError) {
-    console.error('Error creating order items:', itemsError);
-    // Try to rollback - delete the order
-    await supabase.from('pedidos').delete().eq('id', pedidoRow.id);
-    throw { status: 500, message: 'Erro ao criar itens do pedido' };
-  }
+   if (itemsError) {
+      await supabase.from('pedidos').delete().eq('id', pedidoRow.id);
+      throw { status: 500, message: 'Erro ao criar itens do pedido' };
+   }
 
-  // Clear cart items that were ordered
-  const { error: clearCartError } = await supabase
-    .from('carrinho')
-    .delete()
-    .eq('cliente_id', clienteId)
-    .in('produto_id', productIds);
+   const { error: clearCartError } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('cliente_id', clienteId)
+      .in('produto_id', productIds);
 
-  if (clearCartError) {
-    console.error('Error clearing cart:', clearCartError);
-    // Don't fail the order if cart clear fails
-  }
+   const itensDto: Pedido[] = (createdItems || []).map((item: any) => ({
+      id: item.id,
+      produtoId: item.produto_id,
+      nomeProduto: item.nome_produto,
+      precoNaCompra: item.preco_na_compra,
+      quantidade: item.quantidade,
+      vendedorId: item.vendedor_id
+   }));
 
-  // Map order items to DTO
-  const itensDto: PedidoItemDto[] = (createdItems || []).map((item: any) => ({
-    id: item.id,
-    produtoId: item.produto_id,
-    nomeProduto: item.nome_produto,
-    precoNaCompra: item.preco_na_compra,
-    quantidade: item.quantidade,
-    vendedorId: item.vendedor_id
-  }));
-
-  return {
-    id: pedidoRow.id,
-    clienteId: pedidoRow.cliente_id,
-    subtotal: pedidoRow.subtotal,
-    total: pedidoRow.total,
-    endereco: pedidoRow.endereco_json,
-    metodoPagamento: pedidoRow.metodo_pagamento,
-    status: pedidoRow.status,
-    itens: itensDto,
-    createdAt: new Date(pedidoRow.data_criacao),
-    updatedAt: new Date(pedidoRow.updated_at)
-  };
+   return {
+      id: pedidoRow.id,
+      clienteId: pedidoRow.cliente_id,
+      subtotal: pedidoRow.subtotal,
+      total: pedidoRow.total,
+      endereco: pedidoRow.endereco_json,
+      metodoPagamento: pedidoRow.metodo_pagamento,
+      status: pedidoRow.status,
+      itens: itensDto,
+      createdAt: new Date(pedidoRow.data_criacao),
+      updatedAt: new Date(pedidoRow.data_ultima_atualizacao)
+   };
 };
 
 export const recuperarHistorico = async (
@@ -150,7 +139,6 @@ export const recuperarHistorico = async (
 ): Promise<PedidosListagemDto> => {
   const offset = (page - 1) * limit;
 
-  // Fetch orders with count
   const { data: orders, error: ordersError, count } = await supabase
     .from('pedidos')
     .select('*', { count: 'exact' })
@@ -175,7 +163,6 @@ export const recuperarHistorico = async (
     };
   }
 
-  // Fetch order items for all orders
   const orderIds = orders.map(o => o.id);
   const { data: orderItems, error: itemsError } = await supabase
     .from('itens_pedido')
@@ -187,14 +174,13 @@ export const recuperarHistorico = async (
     throw { status: 500, message: 'Erro ao buscar itens dos pedidos' };
   }
 
-  // Group items by order ID
-  const itemsByOrderId = new Map<string, PedidoItemDto[]>();
+  const itemsByOrderId = new Map<string, Pedido[]>();
   (orderItems || []).forEach((item: any) => {
-    const orderItem: PedidoItemDto = {
+    const orderItem: Pedido = {
       id: item.id,
       produtoId: item.produto_id,
-      nomeProduto: item.nome_produto,
-      precoNaCompra: item.preco_na_compra,
+      nome: item.nome_produto,
+      valor: item.preco_na_compra,
       quantidade: item.quantidade,
       vendedorId: item.vendedor_id
     };
@@ -205,7 +191,6 @@ export const recuperarHistorico = async (
     itemsByOrderId.get(item.pedido_id)!.push(orderItem);
   });
 
-  // Map orders to DTO
   const pedidos: PedidoCriadoDto[] = orders.map((order: any) => {
     const pedidoRow = order as PedidoRow;
 
@@ -219,7 +204,7 @@ export const recuperarHistorico = async (
       status: pedidoRow.status,
       itens: itemsByOrderId.get(pedidoRow.id) || [],
       createdAt: new Date(pedidoRow.data_criacao),
-      updatedAt: new Date(pedidoRow.updated_at)
+      updatedAt: new Date(pedidoRow.data_ultima_atualizacao)
     };
   });
 
@@ -241,7 +226,7 @@ export const recuperarPedido = async (
   pedidoId: string,
   clienteId: string
 ): Promise<PedidoCriadoDto> => {
-  // Fetch order
+
   const { data: order, error: orderError } = await supabase
     .from('pedidos')
     .select('*')
@@ -255,7 +240,6 @@ export const recuperarPedido = async (
 
   const pedidoRow = order as PedidoRow;
 
-  // Fetch order items
   const { data: orderItems, error: itemsError } = await supabase
     .from('itens_pedido')
     .select('*')
@@ -266,8 +250,7 @@ export const recuperarPedido = async (
     throw { status: 500, message: 'Erro ao buscar itens do pedido' };
   }
 
-  // Map order items to DTO
-  const itens: PedidoItemDto[] = (orderItems || []).map((item: any) => ({
+  const itens: Pedido[] = (orderItems || []).map((item: any) => ({
     id: item.id,
     produtoId: item.produto_id,
     nomeProduto: item.nome_produto,
@@ -286,6 +269,6 @@ export const recuperarPedido = async (
     status: pedidoRow.status,
     itens,
     createdAt: new Date(pedidoRow.data_criacao),
-    updatedAt: new Date(pedidoRow.updated_at)
+    updatedAt: new Date(pedidoRow.data_ultima_atualizacao)
   };
 };

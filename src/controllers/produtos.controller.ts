@@ -2,17 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import * as produtosService from '../services/produto.service';
 import {
   ProdutoCriarDto,
-  ProdutoAtualizarDto,
-  ProdutoDto,
-  ProdutoListagemDto,
+  ProdutoAlterarDto,
+  Produto,
+  ProdutoListarDto,
   ProdutoPesquisarDto,
-  ProdutoUploadLoteDto,
-  ProdutoUploadLoteRespostaDto
+  ProdutoUploadArquivoDto
 } from './dto/produtos.dto';
 
 export const recuperarProdutos = async (
   req: Request<{}, {}, {}, ProdutoPesquisarDto>,
-  res: Response<ProdutoListagemDto>,
+  res: Response<ProdutoListarDto>,
   next: NextFunction
 ) => {
   try {
@@ -25,7 +24,7 @@ export const recuperarProdutos = async (
 
 export const recuperarProduto = async (
   req: Request<{ id: string }>,
-  res: Response<ProdutoDto>,
+  res: Response<Produto>,
   next: NextFunction
 ) => {
   try {
@@ -38,7 +37,7 @@ export const recuperarProduto = async (
 
 export const criarProduto = async (
   req: Request<{}, {}, ProdutoCriarDto>,
-  res: Response<ProdutoDto>,
+  res: Response<Produto>,
   next: NextFunction
 ) => {
   try {
@@ -53,8 +52,8 @@ export const criarProduto = async (
 };
 
 export const alterarProduto = async (
-  req: Request<{ id: string }, {}, ProdutoAtualizarDto>,
-  res: Response<ProdutoDto>,
+  req: Request<{ id: string }, {}, ProdutoAlterarDto>,
+  res: Response<Produto>,
   next: NextFunction
 ) => {
   try {
@@ -85,15 +84,15 @@ export const deletarProduto = async (
 };
 
 export const bulkUploadCSV = async (
-  req: Request<{}, {}, ProdutoUploadLoteDto>,
-  res: Response<ProdutoUploadLoteRespostaDto>,
+  req: Request<{}, {}, ProdutoUploadArquivoDto>,
+  res: Response,
   next: NextFunction
 ) => {
   try {
     if (!req.user)
       return res.status(401).json({ mensagem: 'Não autenticado' } as any);
 
-    const result = await produtosService.bulkUploadCSV(req.body, req.user.id);
+    const result = await produtosService.bulkUploadCSV(req.body);
     
     res.json(result);
   } catch (error) {

@@ -1,25 +1,39 @@
-export interface CarrinhoAdicionarItemDto {
-  produtoId: string;
-  quantidade: number;
+import { CarrinhoModel } from "../../models/carrinho.model";
+import { Status } from "../../utils/dto/common.dto";
+import { Produto } from "./produtos.dto";
+
+export interface CarrinhoRecuperarDto {
+   usuarioId: string;
 }
 
-export interface CarrinhoAtualizarItemDto {
-  quantidade: number;
+export interface CarrinhoRecuperadoDto {
+   produtos: CarrinhoProduto[];
+   valorTotal: number;
 }
 
-export interface CarrinhoItemDto {
-  id: string;
-  produtoId: string;
-  nomeProduto: string;
-  precoProduto: number;
-  urlImagens: string[];
-  quantidade: number;
-  vendedorId: string;
-  dataCriacao: Date;
+// Dados do produto + propriedades específicas do usuário (quantidade, tamanho, cor....)
+export interface CarrinhoProduto {
+   nome: string;
+   valor: number;
+   quantidadeCarrinho: number;
 }
 
-export interface CarrinhoDto {
-  itens: CarrinhoItemDto[];
-  subtotal: number;
-  quantidadeTotal: number;
+export interface CarrinhoProdutoRecuperadoDto extends CarrinhoModel {
+   nome: string;
+   valor: number;
+   status: Status;
+}
+
+// Poderiam haver n propriedades alteráveis dependendo do produto...
+export interface CarrinhoAlterarDto {
+   produtoId: string;
+   usuarioId: string;
+   quantidade?: number;
+   // ... Outras props futuras
+}
+
+export interface Carrinho {
+   usuarioId: string;
+   produtoId: string;
+   quantidade: number;
 }

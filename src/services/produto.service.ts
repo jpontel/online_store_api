@@ -3,21 +3,21 @@
 import { supabase } from '../config/database';
 import {
   ProdutoCriarDto,
-  ProdutoAtualizarDto,
-  ProdutoDto,
-  ProdutoListagemDto,
+  ProdutoAlterarDto,
+  Produto,
+  ProdutoListarDto,
   ProdutoPesquisarDto,
-  ProdutoUploadLoteDto,
-  ProdutoUploadLoteRespostaDto
+  ProdutoUploadArquivoDto,
+  ProdutoUploadArquivoRetornoDto
 } from '../controllers/dto/produtos.dto';
-import { ProdutoRow } from '../models/produto.model';
+import { ProdutoRow } from '../models/produtos.model';
 
-const produtoToDto = (row: ProdutoRow): ProdutoDto => {
+const produtoToDto = (row: ProdutoRow): Produto => {
   return {
     id: row.id,
     vendedorId: row.vendedor_id,
     nome: row.nome,
-    preco: row.preco,
+    valor: row.preco,
     descricao: row.descricao,
     urlImagens: row.url_imagens,
     publicadoEm: new Date(row.publicado_em),
@@ -27,7 +27,7 @@ const produtoToDto = (row: ProdutoRow): ProdutoDto => {
   };
 };
 
-export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto): Promise<ProdutoListagemDto> => {
+export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto): Promise<ProdutoListarDto> => {
   const {
     busca = '',
     pagina = 1,
@@ -55,7 +55,7 @@ export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto
   const total = count || 0;
   const totalPaginas = Math.ceil(total / limite);
 
-  const produtoListagemDto: ProdutoListagemDto = {
+  const produtoListagemDto: ProdutoListarDto = {
     produtos,
     paginacao: {
       pagina,
@@ -68,7 +68,7 @@ export const recuperarProdutos = async (produtoPesquisarDto: ProdutoPesquisarDto
   return produtoListagemDto;
 };
 
-export const recuperarProduto = async (id: string): Promise<ProdutoDto> => {
+export const recuperarProduto = async (id: string): Promise<Produto> => {
   const { data, error } = await supabase
     .from('produtos')
     .select('*')
@@ -91,7 +91,7 @@ export const recuperarProduto = async (id: string): Promise<ProdutoDto> => {
 export const criarProduto = async (
   data: ProdutoCriarDto,
   vendedorId: string
-): Promise<ProdutoDto> => {
+): Promise<Produto> => {
   const { nome, preco, descricao, urlImagens } = data;
 
   // Validate data
@@ -128,9 +128,9 @@ export const criarProduto = async (
 
 export const alterarProduto = async (
   id: string,
-  data: ProdutoAtualizarDto,
+  data: ProdutoAlterarDto,
   vendedorId: string
-): Promise<ProdutoDto> => {
+): Promise<Produto> => {
   // First, check if product exists and belongs to seller
   const { data: existingProduct, error: fetchError } = await supabase
     .from('produtos')
@@ -153,11 +153,11 @@ export const alterarProduto = async (
   const updateData: any = {};
 
   if (data.nome !== undefined) updateData.nome = data.nome;
-  if (data.preco !== undefined) {
-    if (data.preco < 0) {
+  if (data.valor !== undefined) {
+    if (data.valor < 0) {
       throw { status: 400, message: 'Preço não pode ser negativo' };
     }
-    updateData.preco = data.preco;
+    updateData.preco = data.valor;
   }
   if (data.descricao !== undefined) updateData.descricao = data.descricao;
   if (data.urlImagens !== undefined) updateData.url_imagens = data.urlImagens;
@@ -211,9 +211,9 @@ export const deletarProduto = async (id: string, vendedorId: string): Promise<vo
 };
 
 export const bulkUploadCSV = async (
-  data: ProdutoUploadLoteDto,
+  data: ProdutoUploadArquivoDto,
   vendedorId: string
-): Promise<ProdutoUploadLoteRespostaDto> => {
+): Promise<ProdutoUploadArquivoRetornoDto> => {
   const { produtos } = data;
   let criados = 0;
   let falhados = 0;

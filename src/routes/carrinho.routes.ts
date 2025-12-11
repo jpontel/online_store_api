@@ -6,7 +6,7 @@ import {
   removerItem
 } from '../controllers/carrinho.controller';
 import { autenticarUsuario, validarTipoUsuario } from '../middleware/auth';
-import { TipoUsuario } from '../models/usuario.model';
+import { TipoUsuario } from '../models/usuarios.model';
 
 const router = Router();
 

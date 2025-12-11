@@ -1,12 +1,12 @@
-// Dashboard DTOs - Data Transfer Objects for seller dashboard
+export interface DashboardDto {
+   totalProdutosVendidos: number;
+   faturamentoTotal: number;
+   quantidadeProdutosCadastrados: number;
+   produtoMaisVendido: ProdutoMaisVendido | null;
+}
 
-export interface DashboardResponseDto {
-  totalProdutosVendidos: number;
-  faturamentoTotal: number;
-  quantidadeProdutosCadastrados: number;
-  produtoMaisVendido: {
-    id: string;
-    nome: string;
-    quantidadeVendida: number;
-  } | null;
+interface ProdutoMaisVendido {
+   id: string;
+   nome: string;
+   quantidadeVendida: number;
 }

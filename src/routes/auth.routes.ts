@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { registrar, login, deletarConta } from '../controllers/auth.controller';
+import { registrarUsuario, login, deletarUsuario } from '../controllers/auth.controller';
 import { autenticarUsuario } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/registrar', registrar);
+router.post('/registrar', registrarUsuario);
 router.post('/login', login);
 
-router.delete('/account', autenticarUsuario, deletarConta);
+router.delete('/deletar', autenticarUsuario, deletarUsuario);
 
 export default router;

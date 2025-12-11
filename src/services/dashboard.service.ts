@@ -1,9 +1,9 @@
 // Dashboard service - handles business logic for seller dashboard analytics
 
 import { supabase } from '../config/database';
-import { DashboardResponseDto } from '../controllers/dto/dashboard.dto';
+import { DashboardDto } from '../controllers/dto/dashboard.dto';
 
-export const recuperarDashboard = async (vendedorId: string): Promise<DashboardResponseDto> => {
+export const recuperarDashboard = async (vendedorId: string): Promise<DashboardDto> => {
   try {
 
     // Query 1: Total de vendas
@@ -86,7 +86,7 @@ export const recuperarDashboard = async (vendedorId: string): Promise<DashboardR
       }
     }
 
-    const dashboardResponseDto: DashboardResponseDto = {
+    const dashboardResponseDto: DashboardDto = {
       totalProdutosVendidos,
       faturamentoTotal,
       quantidadeProdutosCadastrados,

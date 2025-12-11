@@ -3,9 +3,9 @@ import {
   ContaVendedorDto,
   ContaVendedorAtualizarDto
 } from '../controllers/dto/conta.dto';
-import { ProdutoListagemDto } from '../controllers/dto/produtos.dto';
-import { UsuarioRow } from '../models/usuario.model';
-import { ProdutoRow } from '../models/produto.model';
+import { ProdutoListarDto } from '../controllers/dto/produtos.dto';
+import { UsuarioModel } from '../models/usuarios.model';
+import { ProdutoRow } from '../models/produtos.model';
 
 export const recuperarContaVendedor = async (vendedorId: string): Promise<ContaVendedorDto> => {
   const { data: user, error } = await supabase
@@ -18,7 +18,7 @@ export const recuperarContaVendedor = async (vendedorId: string): Promise<ContaV
     throw { status: 404, message: 'Usuário não encontrado' };
   }
 
-  const usuario = user as UsuarioRow;
+  const usuario = user as UsuarioModel;
 
   return {
     id: usuario.id,
@@ -61,7 +61,7 @@ export const atualizarContaVendedor = async (
    throw { status: 500, message: 'Erro ao atualizar conta' };
   }
 
-  const usuarioRow = updatedUser as UsuarioRow;
+  const usuarioRow = updatedUser as UsuarioModel;
 
   return {
       id: usuarioRow.id,
@@ -78,7 +78,7 @@ export const listarProdutosVendedor = async (
   vendedorId: string,
   pagina: number = 1,
   limite: number = 20
-): Promise<ProdutoListagemDto> => {
+): Promise<ProdutoListarDto> => {
   const offset = (pagina - 1) * limite;
 
   const { data: products, error, count } = await supabase

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { recuperarDashboard } from '../controllers/dashboard.controller';
 import { autenticarUsuario, validarTipoUsuario } from '../middleware/auth';
-import { TipoUsuario } from '../models/usuario.model';
+import { TipoUsuario } from '../models/usuarios.model';
 
 const router = Router();
 

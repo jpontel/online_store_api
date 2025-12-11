@@ -5,28 +5,23 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { supabase } from '../config/database';
 import {
   UsuarioCriarDto,
-  UsuarioLoginDto,
+  UsuarioAutenticarDto,
   UsuarioAutenticadoDto,
-  UsuarioRemovidoDto,
-  UsuarioRemoverDto
+  Usuario,
+  UsuarioRecuperadoDto,
+  UsuarioAlterarDto,
 } from '../controllers/dto/auth.dto';
 
 import {
   TipoUsuario,
-  StatusUsuario,
-  UsuarioRow,
-  usuarioModelToInsert,
+  UsuarioModel,
+  usuarioToModel,
   usuarioToDto
-} from '../models/usuario.model';
-
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '10');
+} from '../models/usuarios.model';
+import { StatusEnum } from '../utils/dto/common.dto';
 
 const gerarToken = (userId: string, tipo: TipoUsuario): string => {
-   const secret = process.env.JWT_SECRET;
-
-   if (!secret) {
-      throw new Error('Variável JWT_SECRET ');
-   }
+   const secret = process.env.JWT_SECRET ?? "";
 
    const options: SignOptions = {
       expiresIn: '1h'
@@ -41,117 +36,103 @@ const gerarToken = (userId: string, tipo: TipoUsuario): string => {
 
 export const registrarUsuario = async (usuarioCriarDto: UsuarioCriarDto): Promise<UsuarioAutenticadoDto> => {
 
-   const { data: usuario, error: checkError } = await supabase
+   const { data: usuario } = await supabase
       .from('usuarios')
       .select('id')
       .eq('email', usuarioCriarDto.email)
       .single();
 
-   if (usuario)
-      throw { status: 400, message: 'Email já cadastrado' };
+   if(usuario)
+      throw { status: 400, message: 'Email já cadastrado!' };
 
-   const senhaHash = await bcrypt.hash(usuarioCriarDto.senha, BCRYPT_ROUNDS);
+   const senhaHash = await bcrypt.hash(usuarioCriarDto.senha, parseInt(process.env.BCRYPT_ROUNDS || '10'));
 
    usuarioCriarDto.senha = senhaHash;
 
-   const registrarUsuario = usuarioModelToInsert(usuarioCriarDto);
+   const usuarioCriar = usuarioToModel(usuarioCriarDto);
 
-   const { data: novoUsuario, error: insertError } = await supabase
+   const { data: novoUsuario, error: error } = await supabase
       .from('usuarios')
-      .insert(registrarUsuario)
+      .insert(usuarioCriar)
       .select()
       .single();
 
-   if (insertError || !novoUsuario) 
-      throw { status: 500, message: 'Erro ao criar usuário' };
+   if (error || !novoUsuario) 
+      throw { status: 500, message: 'Ocorreu um erro ao criar usuário! :(' };
 
    const token = gerarToken(novoUsuario.id, novoUsuario.tipo);
 
-   const UsuarioAutenticadoDto: UsuarioAutenticadoDto = {
-      usuario: usuarioToDto(novoUsuario as UsuarioRow),
-      token
-   };
+   const UsuarioAutenticadoDto: UsuarioAutenticadoDto = {token};
 
    return UsuarioAutenticadoDto;
 };
 
-export const login = async (data: UsuarioLoginDto): Promise<UsuarioAutenticadoDto> => {
-   const { email, senha } = data;
-
+export const login = async (usuarioAutenticarDto: UsuarioAutenticarDto): Promise<UsuarioAutenticadoDto> => {
    const { data: usuario, error: usuarioErro } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('email', email)
+      .eq('email', usuarioAutenticarDto.email)
       .single();
 
    if (usuarioErro || !usuario) {
       throw { status: 401, message: 'Email ou senha inválidos' };
    }
 
-   const usuarioRow = usuario as UsuarioRow;
+   const usuarioRecuperadoDto = usuario as UsuarioRecuperadoDto;
 
    // Verificar se o usuário está excluído ou inativo
-   if (usuarioRow.status === StatusUsuario.EXCLUIDO || usuarioRow.status === StatusUsuario.INATIVO)
+   if(usuarioRecuperadoDto.status === 'EXCLUIDO' || usuarioRecuperadoDto.status === 'INATIVO')
       throw { status: 403, message: 'Conta inativa ou excluída' };
 
    // Verificar a senha
-   const senhaValida = await bcrypt.compare(senha, usuarioRow.senha_hash);
+   const senhaValida = await bcrypt.compare(usuarioAutenticarDto.senha, usuarioRecuperadoDto.senha);
 
    if(!senhaValida) 
       throw { status: 401, message: 'Email ou senha inválidos' };
 
    // Gerar JWT token
-   const token = gerarToken(usuarioRow.id, usuarioRow.tipo);
-
-   const usuarioAutenticadoDto: UsuarioAutenticadoDto = {
-      usuario: usuarioToDto(usuarioRow),
-      token
-   };
+   const token = gerarToken(usuarioRecuperadoDto.id, usuarioRecuperadoDto.tipo_usuario);
+ 
+   const usuarioAutenticadoDto: UsuarioAutenticadoDto = {token};
 
    return usuarioAutenticadoDto;
 };
 
-export const deletarConta = async ({usuarioId}: UsuarioRemoverDto): Promise<UsuarioRemovidoDto> => {
-   const { data: usuarioData, error: findError } = await supabase
+export const deletarUsuario = async (UsuarioAlterarDto: UsuarioAlterarDto): Promise<void> => {
+   // O correto seria ter um UUID do usuário para não expor o identificador da base
+   const { data: usuario, error: usuarioError } = await supabase
      .from('usuarios')
      .select('*')
-     .eq('id', usuarioId)
+     .eq('id', UsuarioAlterarDto.usuarioId)
      .single();
 
-   if (findError || !usuarioData) 
-        throw { status: 404, message: 'Usuário não encontrado' };
+   if (usuarioError || !usuario) 
+      throw { status: 404, message: 'Usuário não encontrado' };
 
-   const usuario = usuarioData as UsuarioRow;
+   const usuarioRecuperadoDto = usuario as UsuarioRecuperadoDto;
 
-   if (usuario.tipo === TipoUsuario.COMPRADOR) {
+   if (usuarioRecuperadoDto.tipo_usuario === 'CLIENTE') {
 
       const { error: compradorError } = await supabase
          .from('usuarios')
-         .update({ status: StatusUsuario.EXCLUIDO })
-         .eq('id', usuarioId);
+         .update({ status: StatusEnum.EXCLUIDO })
+         .eq('id', usuarioRecuperadoDto.id);
 
       if(compradorError) 
          throw { status: 500, message: 'Erro ao desativar conta' };
+   }
 
-   } else if (usuario.tipo === TipoUsuario.VENDEDOR) {
+   if (usuario.tipo === 'VENDEDOR') {
       // Desativa o vendedor e os seus produtos
       const { error: vendedorError } = await supabase
          .from('usuarios')
-         .update({ status: StatusUsuario.INATIVO })
-         .eq('id', usuarioId);
+         .update({ status: StatusEnum.INATIVO })
+         .eq('id', usuarioRecuperadoDto.id);
 
       if (vendedorError)
          throw { status: 500, message: 'Erro ao desativar conta' };
 
-   } else {
-      throw { status: 400, message: 'Tipo de usuário inválido' };
-   }
+   } 
 
-   const usuarioRemovidoDto: UsuarioRemovidoDto = {
-      mensagem: 'Conta desativada com sucesso',
-      dataExclusao: new Date()
-   };
-
-   return usuarioRemovidoDto;
-
+   throw { status: 400, message: 'Tipo de usuário inválido' };
 };

@@ -1,20 +1,18 @@
-// Favorites DTOs - Data Transfer Objects for favorites
+import { Produto } from "./produtos.dto";
 
 export interface FavoritoAdicionarDto {
-  produtoId: string;
+   produtoId: string;
 }
 
-export interface FavoritoDto {
-  id: string;
-  produtoId: string;
-  nomeProduto: string;
-  precoProduto: number;
-  urlImagens: string[];
-  descricao: string;
-  dataCriacao: Date;
+export interface FavoritoAlterarDto {
+   produtoId: string;
+   usuarioId: string;
 }
 
-export interface FavoritoListagemDto {
-  favoritos: FavoritoDto[];
-  total: number;
+export interface FavoritosRecuperarDto {
+   usuarioId: string;
+}
+
+export interface FavoritosRecuperadoDto {
+   favoritos: Produto[];
 }

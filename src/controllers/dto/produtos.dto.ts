@@ -1,4 +1,5 @@
-// Product DTOs - Data Transfer Objects para produtos
+import { ProdutoModel } from "../../models/produtos.model";
+import { Status } from "../../utils/dto/common.dto";
 
 export interface ProdutoCriarDto {
   nome: string;
@@ -7,26 +8,30 @@ export interface ProdutoCriarDto {
   urlImagens: string[];
 }
 
-export interface ProdutoAtualizarDto {
+export interface ProdutoAlterarDto {
+  produtoId: string;
   nome?: string;
-  preco?: number;
+  valor?: number;
   descricao?: string;
+  quantidade?: number;
   urlImagens?: string[];
-  ativo?: boolean;
+  status?: Status;
 }
 
-export interface ProdutoDto {
+export interface Produto {
   id: string;
   vendedorId: string;
   nome: string;
-  preco: number;
+  valor: number;
   descricao: string;
+  quantidadeCarrinho: number;
   urlImagens: string[];
-  publicadoEm: Date;
-  ativo: boolean;
+  status: Status;
   dataCriacao: Date;
   dataUltimaAtualizacao: Date;
 }
+
+export interface ProdutoRecuperadoDto extends ProdutoModel {}
 
 export interface ProdutoPesquisarDto {
   busca?: string;
@@ -34,8 +39,8 @@ export interface ProdutoPesquisarDto {
   limite?: number;
 }
 
-export interface ProdutoListagemDto {
-  produtos: ProdutoDto[];
+export interface ProdutoListarDto {
+  produtos: Produto[];
   paginacao: {
     pagina: number;
     limite: number;
@@ -44,16 +49,13 @@ export interface ProdutoListagemDto {
   };
 }
 
-export interface ProdutoUploadLoteDto {
+export interface ProdutoUploadArquivoDto {
   produtos: ProdutoCriarDto[];
 }
 
-export interface ProdutoUploadLoteRespostaDto {
-  sucesso: boolean;
-  criados: number;
-  falhados: number;
-  erros?: Array<{
-    linha: number;
-    erro: string;
-  }>;
-}
+// Implementar streaming
+// export interface ProdutoUploadArquivoRetornoDto {
+//   sucesso: boolean;
+//   criados: number;
+//   falhados: number;
+// }

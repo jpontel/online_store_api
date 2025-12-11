@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import * as dashboardService from '../services/dashboard.service';
-import { DashboardResponseDto } from './dto/dashboard.dto';
+import { DashboardDto } from './dto/dashboard.dto';
 
 export const recuperarDashboard = async (
   req: Request,
-  res: Response<DashboardResponseDto>,
+  res: Response<DashboardDto>,
   next: NextFunction
 ) => {
   try {

@@ -1,40 +1,65 @@
-import { TipoUsuario } from "../../models/usuario.model";
+import { TipoUsuario, UsuarioModel } from "../../models/usuarios.model";
+import { Status } from "../../utils/dto/common.dto";
 
 export interface UsuarioCriarDto {
-  email: string;
-  senha: string;
-  tipo: TipoUsuario;
-  nomeLoja?: string;
-  cnpj?: string;
+   nome: string;
+   sobrenome: string;
+   email: string;
+   senha: string;
+   tipoUsuario: TipoUsuario;
+   nomeLoja?: string;
+   cnpj?: string;
+   telefone_pessoal?: number;
+   telefone_comercial?: number;
 }
 
 export interface UsuarioCriadoDto {
-  
+   // Propriedades que o front possa precisar após a criação do usuário...
 }
 
-export interface UsuarioLoginDto {
+export interface UsuarioAlterarDto {
+   usuarioId: string;
+}
+
+export interface UsuarioAutenticarDto {
   email: string;
   senha: string;
 }
 
+export interface UsuarioRecuperarDto {
+   usuarioId: string;
+}
+
+export interface UsuarioRecuperadoDto extends UsuarioModel {}
+
 export interface UsuarioAutenticadoDto {
-  usuario: UsuarioDto;
   token: string;
 }
 
-export interface UsuarioDto {
+export interface Usuario {
   id: string;
+  nome: string;
+  sobrenome: string;
   email: string;
-  tipo: 'COMPRADOR' | 'VENDEDOR';
-  status: 'ATIVO' | 'INATIVO' | 'EXCLUIDO';
+  senha: string;
+  tipoUsuario: TipoUsuario;
+  status: Status;
   dataCriacao: Date;
+  dataUltimaAtualizacao: Date;
 }
 
-export interface UsuarioRemoverDto {
-  usuarioId: string;
+export interface Vendedor extends Usuario {
+   id:string;
+   usuarioId: string;
+   nomeLoja: string;
+   cnpj: string;
+   telefone_pessoal?: number;
+   telefone_comercial?: number;
 }
 
-export interface UsuarioRemovidoDto {
-  mensagem: string;
-  dataExclusao: Date;
+export interface Cliente extends Usuario {
+   id: string;
+   usuarioId: string;
+   cpf: string;
+   telefone: number;
 }

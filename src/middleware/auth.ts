@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { supabase } from '../config/database';
-import { TipoUsuario, StatusUsuario, UsuarioRow } from '../models/usuario.model';
+import { TipoUsuario, UsuarioModel } from '../models/usuarios.model';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-me';
 
@@ -55,7 +55,7 @@ export const autenticarUsuario = async (
       if (userError || !user)
          return res.status(401).json({ message: 'Usuário não encontrado' });
 
-      const usuarioRow = user as UsuarioRow;
+      const usuarioRow = user as UsuarioModel;
 
       if (usuarioRow.status === StatusUsuario.EXCLUIDO || usuarioRow.status === StatusUsuario.INATIVO)
          return res.status(403).json({ message: 'Conta inativa ou excluída' });

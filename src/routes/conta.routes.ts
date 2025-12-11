@@ -3,9 +3,9 @@ import {
   recuperarContaVendedor,
   atualizarContaVendedor,
   listarProdutosVendedor
-} from '../controllers/conta.controller';
+} from '../controllers/vendedor.controller';
 
-import { TipoUsuario } from '../models/usuario.model';
+import { TipoUsuario } from '../models/usuarios.model';
 
 import { Router } from 'express';
 

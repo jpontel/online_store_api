@@ -1,233 +1,183 @@
-// Cart service - handles business logic for shopping cart operations
-
 import { supabase } from '../config/database';
 import {
-  CarrinhoAdicionarItemDto,
-  CarrinhoAtualizarItemDto,
-  CarrinhoItemDto,
-  CarrinhoDto
+  CarrinhoAlterarDto,
+  CarrinhoProduto,
+  CarrinhoProdutoRecuperadoDto,
+  CarrinhoRecuperadoDto,
+  CarrinhoRecuperarDto
 } from '../controllers/dto/carrinho.dto';
-import { ProdutoRow } from '../models/produto.model';
+import { ProdutoRecuperadoDto } from '../controllers/dto/produtos.dto';
+import { StatusEnum } from '../utils/dto/common.dto';
 
-export const recuperarCarrinho = async (clienteId: string): Promise<CarrinhoDto> => {
-   const { data: cartItems, error } = await supabase
+export const recuperarCarrinho = async (carrinhoRecuperarDto: CarrinhoRecuperarDto): Promise<CarrinhoRecuperadoDto> => {
+   const { data: carrinho, error } = await supabase
       .from('carrinho')
       .select(`
-      *,
-      produtos:produto_id (
-         id,
-         nome,
-         preco,
-         url_imagens,
-         vendedor_id,
-         ativo
-      )
+         *,
+         produto!inner(*)
       `)
-      .eq('cliente_id', clienteId);
+      .eq('usuario_id', carrinhoRecuperarDto.usuarioId)
+      .eq('produto.status', StatusEnum.ATIVO);
 
-  if (error)
-    throw { status: 500, message: 'Erro ao buscar carrinho' };
+   if(error)
+      throw { status: 500, message: 'Erro ao buscar carrinho' };
 
-  const activeItems = (cartItems || []).filter((item: any) => item.produtos && item.produtos.ativo);
+   const carrinhoProdutosRecuperadoDto: CarrinhoProdutoRecuperadoDto[] = carrinho;
 
-  const itens: CarrinhoItemDto[] = activeItems.map((item: any) => ({
-    id: item.id,
-    produtoId: item.produto_id,
-    nomeProduto: item.produtos.nome,
-    precoProduto: item.produtos.preco,
-    urlImagens: item.produtos.url_imagens,
-    quantidade: item.quantidade,
-    vendedorId: item.produtos.vendedor_id,
-    dataCriacao: new Date(item.created_at)
-  }));
+   let carrinhoRecuperadoDto: CarrinhoRecuperadoDto = {
+      produtos: [],
+      valorTotal: 0
+   };
 
-  const subtotal = itens.reduce((total, item) => total + (item.precoProduto * item.quantidade), 0);
-  const quantidadeTotal = itens.reduce((total, item) => total + item.quantidade, 0);
+   for (let i = 0; i < carrinhoProdutosRecuperadoDto.length; i++) {
+      const p = carrinhoProdutosRecuperadoDto[i];
 
-  return {
-    itens,
-    subtotal,
-    quantidadeTotal
-  };
+      const produto: CarrinhoProduto = {
+         nome: p.nome,
+         valor: p.valor,
+         quantidadeCarrinho: p.quantidade
+      };
+
+      carrinhoRecuperadoDto.produtos.push(produto);
+      
+   }
+
+   const valorTotal = carrinhoProdutosRecuperadoDto.reduce((total, produto) => {return total + produto.valor * produto.quantidade}, 0);
+
+   carrinhoRecuperadoDto.valorTotal = valorTotal;
+
+   return carrinhoRecuperadoDto;
 };
 
-export const adicionarItem = async (
-  clienteId: string,
-  data: CarrinhoAdicionarItemDto
-): Promise<CarrinhoItemDto> => {
-  const { produtoId, quantidade } = data;
+export const adicionarNovoItem = async (carrinhoAlterarDto: CarrinhoAlterarDto): Promise<void> => {
+   if (!carrinhoAlterarDto.quantidade || carrinhoAlterarDto.quantidade <= 0) {
+      throw { status: 400, message: 'Quantidade deve ser maior que zero' };
+   }
 
-  if (quantidade <= 0) {
-    throw { status: 400, message: 'Quantidade deve ser maior que zero' };
-  }
+   const { data: produto, error: produtoErro } = await supabase
+      .from('produtos')
+      .select('*')
+      .eq('id', carrinhoAlterarDto.produtoId)
+      .single();
 
-  const { data: product, error: productError } = await supabase
-    .from('produtos')
-    .select('*')
-    .eq('id', produtoId)
-    .single();
+   if (produtoErro || !produto) {
+      throw { status: 404, message: 'Produto não encontrado' };
+   }
 
-  if (productError || !product) {
-    throw { status: 404, message: 'Produto não encontrado' };
-  }
+   const produtoRecuperadoDto = produto as ProdutoRecuperadoDto;
 
-  const produto = product as ProdutoRow;
+   if (produtoRecuperadoDto.status === 'EXCLUIDO' || produtoRecuperadoDto.status === 'INATIVO') {
+      throw { status: 400, message: 'Produto não está disponível' };
+   }
 
-  if (!produto.ativo) {
-    throw { status: 400, message: 'Produto não está disponível' };
-  }
+   // Verificar se o item já existe no carrinho do usuário
+   const { data: itemCarrinho, error: checkError } = await supabase
+      .from('carrinho')
+      .select('*')
+      .eq('cliente_id', carrinhoAlterarDto.usuarioId)
+      .eq('produto_id', carrinhoAlterarDto.produtoId)
+      .single();
 
-  // Verificar se o item já existe no carrinho do usuário
-  const { data: itemCarrinho, error: checkError } = await supabase
-    .from('carrinho')
-    .select('*')
-    .eq('cliente_id', clienteId)
-    .eq('produto_id', produtoId)
-    .single();
+   if(itemCarrinho) {
+      // Se item já existe, atualiza a quantidade para mais um
+      const quantidadeItemAlterada = itemCarrinho.quantidade + carrinhoAlterarDto.quantidade;
 
-  if (itemCarrinho) {
-    // Se item já existe, atualiza a quantidade para mais um
-    const quantidadeItemAlterada = itemCarrinho.quantidade + quantidade;
-
-    const { data: itemAlterado, error: updateError } = await supabase
+      const { error: error } = await supabase
       .from('carrinho')
       .update({ quantidade: quantidadeItemAlterada })
       .eq('id', itemCarrinho.id)
       .select()
       .single();
 
-    if (updateError || !itemAlterado)
+      if (error)
       throw { status: 500, message: 'Erro ao atualizar item no carrinho' };
+   }
 
-    return {
-      id: itemAlterado.id,
-      produtoId: produto.id,
-      nomeProduto: produto.nome,
-      precoProduto: produto.preco,
-      urlImagens: produto.url_imagens,
-      quantidade: quantidadeItemAlterada,
-      vendedorId: produto.vendedor_id,
-      dataCriacao: new Date(itemAlterado.created_at)
-    };
-  }
+   const { error: error } = await supabase
+      .from('carrinho')
+      .insert({
+         cliente_id: carrinhoAlterarDto.usuarioId,
+         produto_id: carrinhoAlterarDto.produtoId,
+         quantidade: carrinhoAlterarDto.quantidade
+      })
+      .select()
+      .single();
 
-  const { data: newItem, error: insertError } = await supabase
-    .from('carrinho')
-    .insert({
-      cliente_id: clienteId,
-      produto_id: produtoId,
-      quantidade
-    })
-    .select()
-    .single();
+   if (error) 
+      throw { status: 500, message: 'Erro ao adicionar item ao carrinho' };
 
-  if (insertError || !newItem) 
-    throw { status: 500, message: 'Erro ao adicionar item ao carrinho' };
-
-  const itemCarrinhoRespostaDto: CarrinhoItemDto = {
-    id: newItem.id,
-    produtoId: produto.id,
-    nomeProduto: produto.nome,
-    precoProduto: produto.preco,
-    urlImagens: produto.url_imagens,
-    quantidade,
-    vendedorId: produto.vendedor_id,
-    dataCriacao: new Date(newItem.created_at)
-  };
-
-  return itemCarrinhoRespostaDto;
 };
 
-export const atualizarQuantidade = async (
-  itemId: string,
-  data: CarrinhoAtualizarItemDto,
-  clienteId: string
-): Promise<CarrinhoItemDto> => {
-  const { quantidade } = data;
+export const alterarQuantidadeItem = async (carrinhoAlterarDto: CarrinhoAlterarDto): Promise<void> => {
+   if(!carrinhoAlterarDto.quantidade || carrinhoAlterarDto.quantidade <= 0) {
+      throw { status: 400, message: 'Quantidade deve ser maior que zero' };
+   }
 
-  if (quantidade <= 0) {
-    throw { status: 400, message: 'Quantidade deve ser maior que zero' };
-  }
+   const { data: carrinho, error: carrinhoErro } = await supabase
+      .from('carrinho')
+      .select()
+      .eq('produto_id', carrinhoAlterarDto.produtoId)
+      .eq('usuario_id', carrinhoAlterarDto.usuarioId)
+      .single();
 
-  const { data: carrinho, error: recuperarItemCarrinhoErro } = await supabase
-    .from('carrinho')
-    .select(`
-      *,
-      produtos:produto_id (
-        id,
-        nome,
-        preco,
-        url_imagens,
-        vendedor_id,
-        ativo
-      )
-    `)
-    .eq('id', itemId)
-    .eq('cliente_id', clienteId)
-    .single();
+   if(carrinhoErro || !carrinho)
+      throw { status: 404, message: 'Produto não encontrado no carrinho' };
 
-  if (recuperarItemCarrinhoErro || !carrinho)
-    throw { status: 404, message: 'Item não encontrado no carrinho' };
+   const carrinhoProdutoRecuperadoDto = carrinho as CarrinhoProdutoRecuperadoDto;
 
-  if (!carrinho.produtos || !carrinho.produtos.ativo)
-    throw { status: 400, message: 'Produto não está mais disponível' };
+   if(carrinhoProdutoRecuperadoDto.status === 'EXCLUIDO' || carrinhoProdutoRecuperadoDto.status === 'INATIVO') {
+      throw { status: 403, message: 'Produto indisponível!'};
+   }
 
-  const { data: itemAlterado, error: itemAlteradoErro } = await supabase
-    .from('carrinho')
-    .update({ quantidade })
-    .eq('id', itemId)
-    .select()
-    .single();
+   const { error: error } = await supabase
+      .from('carrinho')
+      .update(carrinhoAlterarDto.quantidade)
+      .eq('usuario_id', carrinhoAlterarDto.usuarioId)
+      .eq('produto_id', carrinhoAlterarDto.produtoId);
 
-  if (itemAlteradoErro || !itemAlterado) 
-    throw { status: 500, message: 'Erro ao atualizar quantidade' };
+   if(error) 
+      throw { status: 500, message: 'Erro ao atualizar quantidade' };
 
-  const itemCarrinhoAlteradoDto: CarrinhoItemDto = {
-    id: itemAlterado.id,
-    produtoId: carrinho.produtos.id,
-    nomeProduto: carrinho.produtos.nome,
-    precoProduto: carrinho.produtos.preco,
-    urlImagens: carrinho.produtos.url_imagens,
-    quantidade,
-    vendedorId: carrinho.produtos.vendedor_id,
-    dataCriacao: new Date(itemAlterado.created_at)
-  };
-
-  return itemCarrinhoAlteradoDto;
 };
 
-export const removerItem = async (itemId: string, clienteId: string): Promise<void> => {
-  const { data: existingItem, error: fetchError } = await supabase
-    .from('carrinho')
-    .select('id')
-    .eq('id', itemId)
-    .eq('cliente_id', clienteId)
-    .single();
+export const removerItem = async (carrinhoAlterarDto: CarrinhoAlterarDto): Promise<void> => {
+   const { data: produtoCarrinho, error: error } = await supabase
+      .from('carrinho')
+      .select('id')
+      .eq('produto_id', carrinhoAlterarDto.produtoId)
+      .eq('usuario_id', carrinhoAlterarDto.usuarioId)
+      .single();
 
-  if (fetchError || !existingItem) {
-    throw { status: 404, message: 'Item não encontrado no carrinho' };
-  }
+   if (error || !produtoCarrinho) {
+      throw { status: 404, message: 'Item não encontrado no carrinho' };
+   }
 
-  // Delete item
-  const { error: deleteError } = await supabase
-    .from('carrinho')
-    .delete()
-    .eq('id', itemId);
+   const { error: deleteError } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('id', carrinhoAlterarDto.produtoId);
 
-  if (deleteError) {
-    console.error('Error removing cart item:', deleteError);
-    throw { status: 500, message: 'Erro ao remover item do carrinho' };
-  }
+   if (deleteError) {
+      throw { status: 500, message: 'Erro ao remover item do carrinho' };
+   }
 };
 
-export const limparCarrinho = async (clienteId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('carrinho')
-    .delete()
-    .eq('cliente_id', clienteId);
+export const limparCarrinho = async (carrinhoAlterarDto: CarrinhoAlterarDto): Promise<void> => {
+   const {data: carrinho, error: carrinhoError} = await supabase
+      .from('carrinho')
+      .select()
+      .eq('usuario_id', carrinhoAlterarDto.usuarioId);
 
-  if (error) {
-    console.error('Error clearing cart:', error);
-    throw { status: 500, message: 'Erro ao limpar carrinho' };
-  }
+   if(!carrinho || carrinhoError) {
+      throw { status: 404, message: 'Ocorreu um erro ao recuperar as informações do carrinho!'};
+   }
+
+   const { error } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('cliente_id', carrinhoAlterarDto);
+
+   if (error) {
+      throw { status: 500, message: 'Erro ao limpar carrinho' };
+   }
 };

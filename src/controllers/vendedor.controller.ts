@@ -6,7 +6,7 @@ import {
   ContaVendedorAtualizarDto
 } from './dto/conta.dto';
 
-import { ProdutoListagemDto } from './dto/produtos.dto';
+import { ProdutoListarDto } from './dto/produtos.dto';
 
 export const recuperarContaVendedor = async (
   req: Request,
@@ -45,7 +45,7 @@ export const atualizarContaVendedor = async (
 
 export const listarProdutosVendedor = async (
   req: Request<{}, {}, {}, { pagina?: string; limite?: string }>,
-  res: Response<ProdutoListagemDto>,
+  res: Response<ProdutoListarDto>,
   next: NextFunction
 ) => {
   try {
